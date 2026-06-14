@@ -1,0 +1,84 @@
+import { API_BASE_URL } from './endpoints';
+import { getAccessToken } from './tokenStore';
+
+/** 정규화된 API 오류. status 0 = 네트워크/서버 도달 불가. */
+export class ApiError extends Error {
+  constructor(
+    readonly status: number,
+    message: string,
+    readonly body?: unknown,
+  ) {
+    super(message);
+    this.name = 'ApiError';
+  }
+
+  /** 서버에 아예 닿지 못한 경우(서버 다운, CORS, 네트워크). */
+  get isNetworkError(): boolean {
+    return this.status === 0;
+  }
+}
+
+interface RequestOptions {
+  method?: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
+  /** JSON 직렬화할 본문 */
+  body?: unknown;
+  /** Bearer 액세스 토큰 첨부 여부 */
+  auth?: boolean;
+  signal?: AbortSignal;
+}
+
+function parseBody(text: string): unknown {
+  if (!text) return undefined;
+  try {
+    return JSON.parse(text);
+  } catch {
+    return text;
+  }
+}
+
+function messageFrom(body: unknown, fallback: string): string {
+  if (body && typeof body === 'object' && 'message' in body) {
+    const m = (body as { message: unknown }).message;
+    if (typeof m === 'string') return m;
+    if (Array.isArray(m) && typeof m[0] === 'string') return m[0];
+  }
+  return fallback;
+}
+
+/**
+ * 백엔드 호출 래퍼. 베이스 URL·공통 헤더(X-Client/Accept-Language)·Bearer 토큰을
+ * 붙이고, 응답을 파싱하며, 실패를 ApiError 로 정규화한다.
+ */
+export async function apiFetch<T>(
+  path: string,
+  options: RequestOptions = {},
+): Promise<T> {
+  const headers: Record<string, string> = {
+    // 백엔드 RequestContext 규약 (네이티브 전용 ios/android/admin)
+    'X-Client': 'admin',
+    'Accept-Language': 'ko',
+  };
+  if (options.body !== undefined) headers['Content-Type'] = 'application/json';
+  if (options.auth) {
+    const token = getAccessToken();
+    if (token) headers.Authorization = `Bearer ${token}`;
+  }
+
+  let res: Response;
+  try {
+    res = await fetch(`${API_BASE_URL}${path}`, {
+      method: options.method ?? 'GET',
+      headers,
+      body: options.body !== undefined ? JSON.stringify(options.body) : undefined,
+      signal: options.signal,
+    });
+  } catch (cause) {
+    throw new ApiError(0, '서버에 연결할 수 없습니다.', cause);
+  }
+
+  const data = parseBody(await res.text());
+  if (!res.ok) {
+    throw new ApiError(res.status, messageFrom(data, res.statusText), data);
+  }
+  return data as T;
+}
