@@ -18,6 +18,21 @@ export class ApiError extends Error {
   }
 }
 
+/** 경로에 쿼리스트링을 붙인다. undefined/null/빈문자열 값은 생략. */
+export function withQuery(
+  path: string,
+  params: Record<string, string | number | undefined | null>,
+): string {
+  const sp = new URLSearchParams();
+  for (const [key, value] of Object.entries(params)) {
+    if (value !== undefined && value !== null && value !== '') {
+      sp.set(key, String(value));
+    }
+  }
+  const qs = sp.toString();
+  return qs ? `${path}?${qs}` : path;
+}
+
 interface RequestOptions {
   method?: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
   /** JSON 직렬화할 본문 */

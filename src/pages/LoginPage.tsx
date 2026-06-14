@@ -4,12 +4,12 @@ import { useAuth } from '../auth/AuthContext';
 import { ApiError } from '../lib/apiClient';
 import { ConnectionStatus } from '../components/ConnectionStatus';
 
-function errorMessage(err: unknown): string {
+function loginError(err: unknown): string {
   if (err instanceof ApiError) {
     if (err.isNetworkError) return '서버에 연결할 수 없습니다. 백엔드가 실행 중인지 확인하세요.';
     if (err.status === 401) return '이메일 또는 비밀번호가 올바르지 않습니다.';
     if (err.status === 423) return '로그인 시도가 너무 많아 계정이 잠겼습니다. 잠시 후 다시 시도하세요.';
-    if (err.status === 404) return '로그인 API가 아직 준비되지 않았습니다. (백엔드 작업 중)';
+    if (err.status === 404) return '로그인 API를 찾을 수 없습니다. (경로/백엔드 확인)';
     return err.message || '로그인에 실패했습니다.';
   }
   return '알 수 없는 오류가 발생했습니다.';
@@ -31,7 +31,7 @@ export function LoginPage() {
       await login(email, password);
       navigate('/', { replace: true });
     } catch (err) {
-      setError(errorMessage(err));
+      setError(loginError(err));
     } finally {
       setSubmitting(false);
     }

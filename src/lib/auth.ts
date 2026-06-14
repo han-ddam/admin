@@ -1,24 +1,19 @@
 import { apiFetch } from './apiClient';
 import { endpoints } from './endpoints';
+import type { AdminAuthResult, AdminRole } from './types';
 
-/** 백엔드 AdminRole 과 동일 (admin 스키마 기준). */
-export type AdminRole = 'SUPER_ADMIN' | 'ADMIN' | 'MODERATOR' | 'CURATOR';
+// 하위 호환: 기존 import 경로 유지
+export type {
+  AdminRole,
+  AdminProfile,
+  TokenPair,
+  AdminAuthResult,
+} from './types';
 
-export interface AdminProfile {
-  id: string;
-  email: string;
-  name: string;
+/** GET /admin/auth/me 응답 (전체 프로필이 아니라 식별 정보만). */
+export interface CurrentAdminInfo {
+  adminId: string;
   role: AdminRole;
-}
-
-export interface TokenPair {
-  accessToken: string;
-  refreshToken: string;
-}
-
-export interface AdminAuthResult {
-  admin: AdminProfile;
-  tokens: TokenPair;
 }
 
 /** 이메일+비밀번호로 관리자 로그인. 실패 시 ApiError throw. */
@@ -29,7 +24,7 @@ export function login(email: string, password: string): Promise<AdminAuthResult>
   });
 }
 
-/** 서버측 세션 종료(리프레시 토큰 폐기). 백엔드 준비 후 동작. */
+/** 서버측 세션 종료(리프레시 토큰 폐기). */
 export function logout(refreshToken: string): Promise<void> {
   return apiFetch<void>(endpoints.adminLogout, {
     method: 'POST',
@@ -37,7 +32,7 @@ export function logout(refreshToken: string): Promise<void> {
   });
 }
 
-/** 현재 로그인한 관리자 정보. 백엔드 준비 후 동작. */
-export function fetchMe(): Promise<AdminProfile> {
-  return apiFetch<AdminProfile>(endpoints.adminMe, { auth: true });
+/** 현재 로그인한 관리자 식별 정보. */
+export function fetchMe(): Promise<CurrentAdminInfo> {
+  return apiFetch<CurrentAdminInfo>(endpoints.adminMe, { auth: true });
 }
