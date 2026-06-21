@@ -24,8 +24,9 @@ pnpm dev                   # http://localhost:5174
 ## 기능
 - **로그인** — 관리자 이메일/비밀번호, 토큰 저장(localStorage), 새로고침 시 세션 복원
 - **회원 관리** (`/members`, ADMIN·SUPER_ADMIN) — 목록·검색·페이지네이션, 정지/해제
+- **여행지 관리** (`/places`, ADMIN·SUPER_ADMIN) — 목록(지역코드 필터·페이지네이션), 생성(좌표·점수·희귀도·태그·KO/EN/JA/ZH 번역)
 - **관리자 관리** (`/admins`, SUPER_ADMIN 전용) — 목록·검색, 생성, 수정(이름/역할/활성)
-- 역할에 따라 사이드바 메뉴·라우트 접근 제어, `/health` 연결 상태 배지
+- 역할(`SUPER_ADMIN`/`ADMIN` 2종)에 따라 사이드바 메뉴·라우트 접근 제어, `/health` 연결 상태 배지
 
 ## API 계약
 모든 경로는 `src/lib/endpoints.ts` 에 모여 있다. 백엔드 라우트가 바뀌면 이 파일만 수정.
@@ -39,7 +40,11 @@ pnpm dev                   # http://localhost:5174
 | GET | `/api/admin/admins?page=&limit=&q=` | 관리자 목록 |
 | POST | `/api/admin/admins` | `{email,password,name,role?}` |
 | PATCH | `/api/admin/admins/:id` | `{name?,role?,isActive?}` |
+| GET | `/api/admin/places?province=&page=&limit=` | 여행지 목록(place 원본 행, 이름 미포함) |
+| POST | `/api/admin/places` | `{regionCode, lat?, lng?, basePoints, rarityWeight, tags?, translations[]}` (KO 필수) |
 | GET | `/api/health` | 연결 상태 배지용 |
+
+> 여행지 수정/삭제·상세, 지역·점수정책·컬렉션·모더레이션 등은 백엔드 API가 나오면 추가 예정.
 
 ## 구조
 - `src/lib/` — `apiClient`(fetch 래퍼+`withQuery`), `endpoints`, `auth`, `tokenStore`, `types`, `errors`, `format`
@@ -47,4 +52,4 @@ pnpm dev                   # http://localhost:5174
 - `src/hooks/useList.ts` — 목록 공통(page/q/로딩/에러)
 - `src/auth/AuthContext.tsx` — 로그인 상태(`useAuth`)
 - `src/components/` — `Layout`, `ProtectedRoute`, `RequireRole`, `Pagination`, `SearchBar`, `Modal`, `ConnectionStatus`
-- `src/pages/` — `LoginPage`, `MembersPage`, `AdminsPage`
+- `src/pages/` — `LoginPage`, `MembersPage`, `PlacesPage`, `AdminsPage`

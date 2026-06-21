@@ -27,4 +27,7 @@ export const endpoints = {
   // --- 관리자 관리 (admin/admins, SUPER_ADMIN) ---
   admins: '/admin/admins',
   admin: (id: string) => `/admin/admins/${id}`,
+
+  // --- 여행지 관리 (admin/places, ADMIN·SUPER_ADMIN) ---
+  places: '/admin/places',
 } as const;

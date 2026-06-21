@@ -5,6 +5,7 @@ import { RequireRole } from './components/RequireRole';
 import { Layout } from './components/Layout';
 import { LoginPage } from './pages/LoginPage';
 import { MembersPage } from './pages/MembersPage';
+import { PlacesPage } from './pages/PlacesPage';
 import { AdminsPage } from './pages/AdminsPage';
 
 export default function App() {
@@ -22,6 +23,7 @@ export default function App() {
           >
             <Route index element={<Navigate to="/members" replace />} />
             <Route path="members" element={<MembersPage />} />
+            <Route path="places" element={<PlacesPage />} />
             <Route
               path="admins"
               element={
