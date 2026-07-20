@@ -15,6 +15,24 @@ pnpm dev                   # http://localhost:5174
 
 백엔드 NestJS API 주소는 `VITE_API_BASE_URL` 환경변수로 주입한다(미설정 시 기본 `http://localhost:3000/api`).
 
+## 서버 배포 (compose.server.yml + nginx)
+
+```bash
+# 서버에서 처음 한 번
+git clone https://github.com/han-ddam/admin.git  # backend 레포와 같은 부모 디렉터리에
+
+# admin 코드가 바뀔 때마다
+cd admin
+VITE_API_BASE_URL=/api pnpm build   # /api → nginx가 백엔드로 프록시
+
+# backend compose 재시작 (admin nginx 포함)
+cd ../backend
+docker compose -f compose.server.yml up -d
+```
+
+admin nginx는 `127.0.0.1:8080` (기본값, `.env`의 `ADMIN_PORT`로 변경 가능)에 바인딩됩니다.
+cloudflared 터널을 `localhost:8080`으로 추가하면 외부에서 접근할 수 있습니다.
+
 ## 스크립트
 - `pnpm dev` — 개발 서버
 - `pnpm build` — 타입체크 + 프로덕션 빌드
