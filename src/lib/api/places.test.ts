@@ -1,5 +1,12 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { createPlace, listPlaces } from './places';
+import {
+  createPlace,
+  deletePlaceImage,
+  listPlaces,
+  setPlaceStatus,
+  setPlaceWeightConfig,
+  uploadPlaceImage,
+} from './places';
 
 vi.mock('../tokenStore', () => ({ getAccessToken: () => 'test-token' }));
 
@@ -34,6 +41,48 @@ describe('listPlaces', () => {
     const fetchMock = stubFetch(200, { items: [], total: 0, page: 1, limit: 20 });
     await listPlaces({ page: 1, limit: 20 });
     expect(String(fetchMock.mock.calls[0][0])).not.toContain('province=');
+  });
+
+  it('status 를 쿼리로 붙인다', async () => {
+    const fetchMock = stubFetch(200, { items: [], total: 0, page: 1, limit: 20 });
+    await listPlaces({ status: 'HIDDEN', page: 1, limit: 20 });
+    expect(String(fetchMock.mock.calls[0][0])).toContain('status=HIDDEN');
+  });
+});
+
+describe('place 상태/가중치/이미지', () => {
+  it('상태 변경은 PATCH /:id/status', async () => {
+    const fetchMock = stubFetch(200, { id: 'p1', status: 'HIDDEN' });
+    await setPlaceStatus('p1', 'HIDDEN');
+    const [url, init] = fetchMock.mock.calls[0];
+    expect(String(url)).toMatch(/\/admin\/places\/p1\/status$/);
+    expect(init?.method).toBe('PATCH');
+    expect(JSON.parse(init?.body as string)).toEqual({ status: 'HIDDEN' });
+  });
+
+  it('가중치 배정 해제는 configId=null 을 보낸다', async () => {
+    const fetchMock = stubFetch(200, { updated: true });
+    await setPlaceWeightConfig('p1', null);
+    const [url, init] = fetchMock.mock.calls[0];
+    expect(String(url)).toMatch(/\/admin\/places\/p1\/weight-config$/);
+    expect(JSON.parse(init?.body as string)).toEqual({ configId: null });
+  });
+
+  it('이미지 업로드는 FormData 를 POST 한다', async () => {
+    const fetchMock = stubFetch(201, { imageUrl: '/api/places/images/k' });
+    const file = new File(['x'], 'a.png', { type: 'image/png' });
+    await uploadPlaceImage('p1', file);
+    const [url, init] = fetchMock.mock.calls[0];
+    expect(String(url)).toMatch(/\/admin\/places\/p1\/image$/);
+    expect(init?.body).toBeInstanceOf(FormData);
+  });
+
+  it('이미지 삭제는 DELETE', async () => {
+    const fetchMock = stubFetch(200, { imageUrl: null });
+    await deletePlaceImage('p1');
+    const [url, init] = fetchMock.mock.calls[0];
+    expect(String(url)).toMatch(/\/admin\/places\/p1\/image$/);
+    expect(init?.method).toBe('DELETE');
   });
 });
 

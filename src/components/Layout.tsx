@@ -13,6 +13,9 @@ interface NavItem {
 const NAV: NavItem[] = [
   { to: '/members', label: '회원 관리' },
   { to: '/places', label: '여행지 관리' },
+  { to: '/collections', label: '컬렉션 관리' },
+  { to: '/badges', label: '뱃지 관리' },
+  { to: '/weight-configs', label: '점수 가중치' },
   { to: '/admins', label: '관리자 관리', roles: ['SUPER_ADMIN'] },
 ];
 

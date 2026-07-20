@@ -30,4 +30,29 @@ export const endpoints = {
 
   // --- 여행지 관리 (admin/places, ADMIN·SUPER_ADMIN) ---
   places: '/admin/places',
+  placeStatus: (id: string) => `/admin/places/${id}/status`,
+  placeWeightConfig: (id: string) => `/admin/places/${id}/weight-config`,
+  placeImage: (id: string) => `/admin/places/${id}/image`,
+
+  // --- 구도 가이드 (admin/places/:id/compositions, admin/compositions) ---
+  placeCompositions: (id: string) => `/admin/places/${id}/compositions`,
+  placeCompositionPhoto: (id: string) => `/admin/places/${id}/compositions/photos`,
+  composition: (compositionId: string) =>
+    `/admin/places/compositions/${compositionId}`,
+  compositionsImport: '/admin/compositions/import',
+
+  // --- 점수 가중치 (admin/weight-configs, ADMIN·SUPER_ADMIN) ---
+  weightConfigs: '/admin/weight-configs',
+  weightConfig: (id: string) => `/admin/weight-configs/${id}`,
+
+  // --- 뱃지 (admin/badges, ADMIN·SUPER_ADMIN) ---
+  badges: '/admin/badges',
+  badge: (id: string) => `/admin/badges/${id}`,
+
+  // --- 컬렉션/테마 (admin/collections, ADMIN·SUPER_ADMIN) ---
+  collections: '/admin/collections',
+  collection: (id: string) => `/admin/collections/${id}`,
+  collectionPlaces: (id: string) => `/admin/collections/${id}/places`,
+  collectionPlace: (id: string, placeId: string) =>
+    `/admin/collections/${id}/places/${placeId}`,
 } as const;

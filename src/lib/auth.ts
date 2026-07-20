@@ -1,6 +1,6 @@
 import { apiFetch } from './apiClient';
 import { endpoints } from './endpoints';
-import type { AdminAuthResult, AdminRole } from './types';
+import type { AdminAuthResult, AdminProfile } from './types';
 
 // 하위 호환: 기존 import 경로 유지
 export type {
@@ -9,12 +9,6 @@ export type {
   TokenPair,
   AdminAuthResult,
 } from './types';
-
-/** GET /admin/auth/me 응답 (전체 프로필이 아니라 식별 정보만). */
-export interface CurrentAdminInfo {
-  adminId: string;
-  role: AdminRole;
-}
 
 /** 이메일+비밀번호로 관리자 로그인. 실패 시 ApiError throw. */
 export function login(email: string, password: string): Promise<AdminAuthResult> {
@@ -32,7 +26,7 @@ export function logout(refreshToken: string): Promise<void> {
   });
 }
 
-/** 현재 로그인한 관리자 식별 정보. */
-export function fetchMe(): Promise<CurrentAdminInfo> {
-  return apiFetch<CurrentAdminInfo>(endpoints.adminMe, { auth: true });
+/** 현재 로그인한 관리자 전체 프로필 (토큰 유효성 확인 겸용). */
+export function fetchMe(): Promise<AdminProfile> {
+  return apiFetch<AdminProfile>(endpoints.adminMe, { auth: true });
 }

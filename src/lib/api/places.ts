@@ -1,16 +1,24 @@
-import { apiFetch, withQuery } from '../apiClient';
+import { apiFetch, apiUpload, withQuery } from '../apiClient';
 import { endpoints } from '../endpoints';
-import type { AdminPlace, CreatePlaceInput, Paginated } from '../types';
+import type {
+  AdminPlace,
+  CreatePlaceInput,
+  Paginated,
+  PlaceStatus,
+  PlaceToggleStatus,
+} from '../types';
 
 /** type 별칭 — withQuery 의 Record 파라미터에 할당 가능해야 함. */
 export type PlaceListQuery = {
   /** 상위 지역(시·도) 코드 접두 필터. */
   province?: string;
+  /** 상태 필터. */
+  status?: PlaceStatus;
   page?: number;
   limit?: number;
 };
 
-/** 여행지 목록 (province 접두 필터 + 페이지네이션). */
+/** 여행지 목록 (province 접두 필터 + 상태 필터 + 페이지네이션). */
 export function listPlaces(params: PlaceListQuery): Promise<Paginated<AdminPlace>> {
   return apiFetch<Paginated<AdminPlace>>(withQuery(endpoints.places, params), {
     auth: true,
@@ -31,5 +39,49 @@ export function createPlace(input: CreatePlaceInput): Promise<CreatePlaceResult>
     method: 'POST',
     auth: true,
     body: input,
+  });
+}
+
+/** 노출/숨김 상태 변경. */
+export function setPlaceStatus(
+  id: string,
+  status: PlaceToggleStatus,
+): Promise<{ id: string; status: PlaceStatus }> {
+  return apiFetch<{ id: string; status: PlaceStatus }>(endpoints.placeStatus(id), {
+    method: 'PATCH',
+    auth: true,
+    body: { status },
+  });
+}
+
+/** 가중치 프리셋 배정(해제 시 null). */
+export function setPlaceWeightConfig(
+  id: string,
+  configId: string | null,
+): Promise<{ updated: true }> {
+  return apiFetch<{ updated: true }>(endpoints.placeWeightConfig(id), {
+    method: 'PATCH',
+    auth: true,
+    body: { configId },
+  });
+}
+
+/** 대표 이미지 업로드. */
+export function uploadPlaceImage(
+  id: string,
+  file: File,
+): Promise<{ imageUrl: string }> {
+  const form = new FormData();
+  form.append('file', file);
+  return apiUpload<{ imageUrl: string }>(endpoints.placeImage(id), form, {
+    auth: true,
+  });
+}
+
+/** 대표 이미지 삭제. */
+export function deletePlaceImage(id: string): Promise<{ imageUrl: null }> {
+  return apiFetch<{ imageUrl: null }>(endpoints.placeImage(id), {
+    method: 'DELETE',
+    auth: true,
   });
 }

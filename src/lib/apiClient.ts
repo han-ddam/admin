@@ -1,6 +1,20 @@
 import { API_BASE_URL } from './endpoints';
 import { getAccessToken } from './tokenStore';
 
+/**
+ * 백엔드가 반환하는 상대 경로(예: `/api/places/images/xxx`)를 브라우저에서 열 수
+ * 있는 절대 URL로 바꾼다. 이미 절대 URL이면 그대로 둔다.
+ */
+export function assetUrl(path: string | null | undefined): string | null {
+  if (!path) return null;
+  if (/^https?:\/\//.test(path)) return path;
+  try {
+    return new URL(path, API_BASE_URL).href;
+  } catch {
+    return path;
+  }
+}
+
 /** 정규화된 API 오류. status 0 = 네트워크/서버 도달 불가. */
 export class ApiError extends Error {
   constructor(
@@ -85,6 +99,43 @@ export async function apiFetch<T>(
       method: options.method ?? 'GET',
       headers,
       body: options.body !== undefined ? JSON.stringify(options.body) : undefined,
+      signal: options.signal,
+    });
+  } catch (cause) {
+    throw new ApiError(0, '서버에 연결할 수 없습니다.', cause);
+  }
+
+  const data = parseBody(await res.text());
+  if (!res.ok) {
+    throw new ApiError(res.status, messageFrom(data, res.statusText), data);
+  }
+  return data as T;
+}
+
+/**
+ * 멀티파트(FormData) 업로드 래퍼. Content-Type 은 브라우저가 boundary 와 함께
+ * 자동 지정하므로 직접 넣지 않는다. 이미지/CSV 업로드에 사용.
+ */
+export async function apiUpload<T>(
+  path: string,
+  form: FormData,
+  options: { auth?: boolean; signal?: AbortSignal } = {},
+): Promise<T> {
+  const headers: Record<string, string> = {
+    'X-Client': 'admin',
+    'Accept-Language': 'ko',
+  };
+  if (options.auth) {
+    const token = getAccessToken();
+    if (token) headers.Authorization = `Bearer ${token}`;
+  }
+
+  let res: Response;
+  try {
+    res = await fetch(`${API_BASE_URL}${path}`, {
+      method: 'POST',
+      headers,
+      body: form,
       signal: options.signal,
     });
   } catch (cause) {
