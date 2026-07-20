@@ -2,10 +2,17 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { login } from './auth';
 import { ApiError } from './apiClient';
 
+/** 실제 백엔드 응답 형식: 성공은 { result }, 실패는 { error: { code, message } } */
 function mockFetch(status: number, body: unknown) {
+  const wrapped =
+    body === undefined
+      ? undefined
+      : status >= 200 && status < 300
+        ? { result: body }
+        : body; // 에러 응답은 이미 { error: { code, message } } 형태로 전달
   return vi.fn(
     async (_input: RequestInfo | URL, _init?: RequestInit): Promise<Response> =>
-      new Response(body === undefined ? '' : JSON.stringify(body), {
+      new Response(wrapped === undefined ? '' : JSON.stringify(wrapped), {
         status,
         headers: { 'content-type': 'application/json' },
       }),
@@ -39,7 +46,10 @@ describe('login', () => {
   });
 
   it('401 응답 시 ApiError(401)을 던진다', async () => {
-    vi.stubGlobal('fetch', mockFetch(401, { message: 'Invalid credentials' }));
+    vi.stubGlobal(
+      'fetch',
+      mockFetch(401, { error: { code: 'UNAUTHORIZED', message: 'Invalid credentials' } }),
+    );
 
     await expect(login('a@b.com', 'wrong')).rejects.toMatchObject({
       status: 401,

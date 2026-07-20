@@ -5,9 +5,11 @@ import { listMembers, setMemberStatus } from './members';
 vi.mock('../tokenStore', () => ({ getAccessToken: () => 'test-token' }));
 
 function stubFetch(status: number, body: unknown) {
+  const wrapped =
+    body === undefined ? undefined : status >= 200 && status < 300 ? { result: body } : body;
   const fn = vi.fn(
     async (_input: RequestInfo | URL, _init?: RequestInit): Promise<Response> =>
-      new Response(body === undefined ? '' : JSON.stringify(body), {
+      new Response(wrapped === undefined ? '' : JSON.stringify(wrapped), {
         status,
         headers: { 'content-type': 'application/json' },
       }),

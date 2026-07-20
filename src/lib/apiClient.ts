@@ -65,13 +65,35 @@ function parseBody(text: string): unknown {
   }
 }
 
+/**
+ * 백엔드 에러 응답 `{ error: { code, message } }` 에서 message 를 꺼낸다.
+ * 구 형식 `{ message }` 도 폴백으로 지원.
+ */
 function messageFrom(body: unknown, fallback: string): string {
-  if (body && typeof body === 'object' && 'message' in body) {
-    const m = (body as { message: unknown }).message;
+  if (body && typeof body === 'object') {
+    // 백엔드 AllExceptionsFilter: { error: { code, message } }
+    const err = (body as Record<string, unknown>).error;
+    if (err && typeof err === 'object') {
+      const m = (err as Record<string, unknown>).message;
+      if (typeof m === 'string') return m;
+    }
+    // 폴백: { message }
+    const m = (body as Record<string, unknown>).message;
     if (typeof m === 'string') return m;
     if (Array.isArray(m) && typeof m[0] === 'string') return m[0];
   }
   return fallback;
+}
+
+/**
+ * 백엔드 ResponseInterceptor 가 성공 응답을 `{ result: data }` 로 감싼다.
+ * 204(빈 응답) 처럼 result 키가 없으면 그대로 반환.
+ */
+function unwrap(data: unknown): unknown {
+  if (data && typeof data === 'object' && 'result' in (data as object)) {
+    return (data as { result: unknown }).result;
+  }
+  return data;
 }
 
 /**
@@ -105,11 +127,11 @@ export async function apiFetch<T>(
     throw new ApiError(0, '서버에 연결할 수 없습니다.', cause);
   }
 
-  const data = parseBody(await res.text());
+  const raw = parseBody(await res.text());
   if (!res.ok) {
-    throw new ApiError(res.status, messageFrom(data, res.statusText), data);
+    throw new ApiError(res.status, messageFrom(raw, res.statusText), raw);
   }
-  return data as T;
+  return unwrap(raw) as T;
 }
 
 /**
@@ -142,9 +164,9 @@ export async function apiUpload<T>(
     throw new ApiError(0, '서버에 연결할 수 없습니다.', cause);
   }
 
-  const data = parseBody(await res.text());
+  const raw = parseBody(await res.text());
   if (!res.ok) {
-    throw new ApiError(res.status, messageFrom(data, res.statusText), data);
+    throw new ApiError(res.status, messageFrom(raw, res.statusText), raw);
   }
-  return data as T;
+  return unwrap(raw) as T;
 }
