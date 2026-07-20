@@ -15,23 +15,45 @@ pnpm dev                   # http://localhost:5174
 
 백엔드 NestJS API 주소는 `VITE_API_BASE_URL` 환경변수로 주입한다(미설정 시 기본 `http://localhost:3000/api`).
 
-## 서버 배포 (compose.server.yml + nginx)
+## 서버 배포 (Docker — backend compose가 admin을 빌드·서빙)
 
-```bash
-# 서버에서 처음 한 번
-git clone https://github.com/han-ddam/admin.git  # backend 레포와 같은 부모 디렉터리에
+admin은 **별도 repo**지만 배포는 backend의 `compose.server.yml`이 담당한다.
+admin 컨테이너가 `../admin`(형제 폴더)을 **멀티스테이지 Docker 빌드**(node로 `pnpm build` → nginx 서빙)하므로
+**호스트에 node/pnpm이 필요 없다.** (`admin/Dockerfile` 포함되어 있어야 함)
 
-# admin 코드가 바뀔 때마다
-cd admin
-VITE_API_BASE_URL=/api pnpm build   # /api → nginx가 백엔드로 프록시
-
-# backend compose 재시작 (admin nginx 포함)
-cd ../backend
-docker compose -f compose.server.yml up -d
+### 폴더 구조 (미니PC — 두 repo를 형제로)
+```
+~/projects/han-ddam/
+├─ backend/     ← git clone. compose.server.yml 을 여기서 실행 (DEPLOY_DIR = 이 경로)
+└─ admin/       ← git clone (이 repo). Dockerfile 포함
 ```
 
-admin nginx는 `127.0.0.1:8080` (기본값, `.env`의 `ADMIN_PORT`로 변경 가능)에 바인딩됩니다.
-cloudflared 터널을 `localhost:8080`으로 추가하면 외부에서 접근할 수 있습니다.
+### 처음 한 번 (서버)
+```bash
+mkdir -p ~/projects/han-ddam && cd ~/projects/han-ddam
+git clone <backend-repo> backend
+git clone <admin-repo>   admin
+# backend/.env 준비 (DB·JWT·GEMINI_API_KEY 등)
+```
+
+### 배포 — 자동(CI)
+`backend` main 에 push → `.github/workflows/deploy.yml` 이 SSH로 서버 접속 →
+`backend` + `admin` 둘 다 `git pull` → `docker compose build app admin` → migrate → `up -d`.
+- admin **만** 바뀐 경우: backend를 한 번 push 하거나, GitHub Actions에서 `deploy` 워크플로를 **수동 실행**(workflow_dispatch).
+
+### 배포 — 수동
+```bash
+cd ~/projects/han-ddam/admin && git pull        # admin 최신화
+cd ../backend
+docker compose -f compose.server.yml build admin
+docker compose -f compose.server.yml up -d admin
+```
+
+### 동작 요약
+- **API 주소**: 빌드 시 `VITE_API_BASE_URL=/api`(compose build arg 기본값)로 주입 → 브라우저가 `/api/...` 호출 → nginx가 `app:3000` 으로 프록시(설정: `backend/docker/nginx-admin.conf`).
+- **포트**: admin nginx → `127.0.0.1:8080`(`.env` 의 `ADMIN_PORT` 로 변경). cloudflared 터널을 `admin.<도메인> → localhost:8080` 으로 붙이면 외부 노출.
+- **컨텍스트 경로**: 기본 `../admin`. 다르면 backend `.env` 의 `ADMIN_CONTEXT` 로 지정.
+- 호스트에서 직접 `pnpm build` 하던 예전 방식(dist 바인드마운트)은 더 이상 필요 없다.
 
 ## 스크립트
 - `pnpm dev` — 개발 서버
